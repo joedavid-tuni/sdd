@@ -1,0 +1,9 @@
+__pycache__/
+test_images/
+train_images/
+*.csv
+.idea/
+*.log
+
+*.h5
+*.json
