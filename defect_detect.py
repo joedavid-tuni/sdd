@@ -27,6 +27,7 @@ def dice_coef(y_true, y_pred, smooth=1):
     intersection = K.sum(y_true_f * y_pred_f)
     return (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
 
+
 def get_model():
     """Gets the model used for training the dataset
 
@@ -47,7 +48,6 @@ def load_and_visualize(path):
     Args:
           path (str): root directory containing the images to visualize
     """
-    filenames = {}
 
     dg = DataGenerator(N=69, path=path, batch_size=6, no_of_classes=3, img_size=(640, 480))
     for batch_idx, (image_names, X, Y) in enumerate(dg):  # loop batches one by one
@@ -61,12 +61,17 @@ def load_and_visualize(path):
                     img[mask == 1, 1] = 235
                 elif m == 1:
                     img[mask == 1, 1] = 210  # green
+                elif m == 2:
+                    img[mask == 1, 2] = 255  # blue
             plt.axis('off')
             fig.add_subplot(2, 3, idx+1)
             plt.imshow(img/255.0)
             plt.title(image_names[idx])
         plt.show()
 
+
+def main():
+    load_and_visualize('/home/joe/Documents/steel_defect_detection/resized_images/')
 
 
 if __name__ == '__main__':
