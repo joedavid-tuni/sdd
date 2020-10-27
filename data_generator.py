@@ -1,7 +1,8 @@
 import numpy as np
 import keras
-from utils import rle2mask
+from utils import rle_decode
 import matplotlib.pyplot as plt
+import ijson
 
 
 class DataGenerator(keras.utils.Sequence):
@@ -9,37 +10,34 @@ class DataGenerator(keras.utils.Sequence):
 
     """
 
-    def __init__(self, data, path, img_size=(128, 800), batch_size=16, subset="train", shuffle=False,
-                 preprocess=None, info={}):
+    def __init__(self, N, path, no_of_classes, img_size=(640, 480), batch_size=16, shuffle=False, preprocess=None):
         """ Initializes the DataGenerator Object
 
         Args:
-            data (numpy.ndarray): All of data from which to create batches
             shuffle (bool) : whether to shuffle the order in which data is fed to the model
-            subset (str): which subset of dataset to use; Trainining or testing
             batch_size (int): size of batch that arrives as data feed
             preprocess : pre-processing BACKBONE
-            info (str) : image IDs generated at each pass
             path (str) : root directory containing the training and testing dataset
             img_size (tuple): size of the image to be provided in the data feed
 
         """
 
         super().__init__()
-        self.data = data
         self.shuffle = shuffle
-        self.subset = subset
         self.batch_size = batch_size
         self.preprocess = preprocess
-        self.info = info
+        self.N = N
         self.path = path
         self.img_size = img_size
-
-        if self.subset == "train":
-            self.data_path = path + 'train_images/'
-        elif self.subset == "test":
-            self.data_path = path + 'test_images/'
         self.on_epoch_end()
+        self.indexes = np.arange(self.N)
+        self.no_of_classes = no_of_classes
+
+        annotations_PREFIX = "images.item"
+        f = open('ICH.json')
+
+        self.annotations = ijson.items(f, annotations_PREFIX)
+
 
     def __len__(self):
         """Calculates number of batch in the Sequence.
@@ -47,15 +45,21 @@ class DataGenerator(keras.utils.Sequence):
         Returns:
             (int): The number of batches in the Sequence.
         """
-        return int(np.floor(len(self.data) / self.batch_size))
+        return int(np.floor(self.N / self.batch_size))
 
     def on_epoch_end(self):
         """ A method called at the end of every epoch that shuffles the data if parameter shuffle = True.
 
         """
-        self.indexes = np.arange(len(self.data))
-        if self.shuffle == True:
+
+        if self.shuffle:
             np.random.shuffle(self.indexes)
+
+    def fetch_data(self):
+        for idx, annotation_object in enumerate(self.annotations):
+            yield idx, annotation_object
+
+
 
     def __getitem__(self, index):
         """Generates one batch of data at position 'index'.
@@ -74,25 +78,56 @@ class DataGenerator(keras.utils.Sequence):
         Note: If subset =' train', both the images along with its masks is returned. This is essentially the information
         contained in the train.csv file. If subset = 'test', only the images in the test_images folder is returned
         """
-        # (batch size, image height, image width, number of channels (RGB=3))
-        X = np.zeros((self.batch_size, self.img_size[0], self.img_size[1], 3), dtype=np.float32)
+        # (batch size, image height (rows), image width (columns), number of channels (RGB=3))
+        X = np.zeros((self.batch_size, self.img_size[1], self.img_size[0], 3), dtype=np.float32)
 
-        # (batch size, image height, image width, number of (defect) classes = 4 )
-        Y = np.zeros((self.batch_size, self.img_size[0], self.img_size[1], 4), dtype=np.int8)
+        # (batch size, image height (rows), image width (columns), number of (defect) classes = 3)
+        Y = np.zeros((self.batch_size, self.img_size[1], self.img_size[0], self.no_of_classes), dtype=np.int8)
 
         # Generate indexes of the batch
         indexes = self.indexes[index * self.batch_size:(index + 1) * self.batch_size]
 
-        for idx, (imgID, masks) in enumerate(self.data[indexes]):
-            self.info[index * self.batch_size + idx] = imgID
-            X[idx, ] = plt.imread(self.data_path + imgID)[::2, ::2]
-            if self.subset == 'train':
-                defectsIDs = masks['defectIDs']
-                masks = masks['masks']
-                for m in range(len(defectsIDs)):
-                    Y[idx, :, :, defectsIDs[m]] = rle2mask(masks[m])[::2, ::2] # the : : is filled with a matrix of 0s and 1s as returned by the rle2mask() 0s for black and 1s for the contour
-        if self.preprocess != None: X = self.preprocess(X)
-        if self.subset == 'train':
-            return X, Y
-        else:
-            return X
+        class_map = {'scratch': 0 , 'blister': 1, 'dent': 2}
+        image_names = []
+        for idx, annotation_object in self.fetch_data():
+
+            image_name = annotation_object["image_name"]
+            image_names.append(image_name)
+            X[idx, ] = plt.imread(self.path + image_name)
+            masks_rle = []
+            defect_classes = []
+            bboxes = []
+            masks = np.zeros((self.img_size[1], self.img_size[0], self.no_of_classes), dtype=np.int8)
+
+            for label in annotation_object["labels"]:
+                mask_rle = label["mask"]
+                masks_rle.append(mask_rle)
+                defect_classes.append(label["class_name"])
+                bboxes.append(label["bbox"])
+
+            # mapping defect classes to integers based on class_map dict
+            defect_classes = list(map(class_map.get, defect_classes))
+
+            for defect_class, mask, bbox in zip(defect_classes, masks_rle, bboxes):
+
+                # if brush tool is used
+                if mask is not None:
+                    x_min, y_min, x_max, y_max = bbox
+                    x_diff = x_max - x_min
+                    y_diff = y_max - y_min
+                    _mask = rle_decode(mask, (x_diff,y_diff))
+
+                    defect_mask = np.zeros((self.img_size[1], self.img_size[0]), dtype=np.int8)
+
+                    for index, x in np.ndenumerate(_mask):
+                        if x == 1:
+                            defect_mask[index[0] + y_min, index[1] + x_min] = 1
+
+                    masks[:, :, defect_class] = np.logical_or(masks[:, :, defect_class], defect_mask)
+
+            for defect_class in defect_classes:
+                Y[idx, :, :, defect_class] = masks[:, :, defect_class]
+
+            if idx == self.batch_size-1:
+                if self.preprocess is not None: X = self.preprocess(X)
+                return image_names, X, Y

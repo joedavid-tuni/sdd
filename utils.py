@@ -7,25 +7,24 @@ from PIL import Image
 from pathlib import Path
 
 
-def rle2mask(rle_string, shape=(1600, 256)):
-    """ Converts run-length-encoded mask to numpy array of image dimensions
-
-    Args:
-        mask_rle (str): run-length encoding as string formated (start length)
-        shape (tuple): (height,width) of array to return
-
-    Returns:
-        (ndarray) numpy mask array (1 - mask, 0 - background)
+# Hasty AI
+def rle_decode(mask_rle, shape):
     """
-    s = rle_string.split()
+    mask_rle: run-length as string formatted (start length)
+    shape: (width, height) of array to return
+    Returns numpy array, 1 - mask, 0 - background
+    """
+    s = mask_rle
     starts, lengths = [np.asarray(x, dtype=int) for x in (s[0:][::2], s[1:][::2])]
     starts -= 1
     ends = starts + lengths
+    shape = shape[1], shape[0]
     img = np.zeros(shape[0] * shape[1], dtype=np.uint8)
     for lo, hi in zip(starts, ends):
         img[lo:hi] = 1
-    return img.reshape(shape).T # Transposed Needed to accommodate with receiving array dimensions
+    img = img.reshape(shape)
 
+    return img
 
 def mask2contour(mask, width=3):
     """ Converts mask to contour
