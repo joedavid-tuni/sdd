@@ -119,9 +119,7 @@ class DataGenerator(keras.utils.Sequence):
 
                     defect_mask = np.zeros((self.img_size[1], self.img_size[0]), dtype=np.int8)
 
-                    for index, x in np.ndenumerate(_mask):
-                        if x == 1:
-                            defect_mask[index[0] + y_min, index[1] + x_min] = 1
+                    defect_mask[y_min:y_max, x_min:x_max][_mask == 1] = 1
 
                     masks[:, :, defect_class] = np.logical_or(masks[:, :, defect_class], defect_mask)
 
