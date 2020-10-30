@@ -37,10 +37,24 @@ def get_model():
     """
 
     preprocess = sm.get_preprocessing('resnet34')
-    model = sm.Unet('resnet34', input_shape=(480, 600, 3), classes=2, activation='sigmoid')
+    model = sm.Unet('resnet34', input_shape=(480, 640, 3), classes=2, activation='sigmoid')
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=[dice_coef])
     return model, preprocess
 
+def train(path, save_file):
+
+    """ Trains the model
+
+        Args:
+            path (str): root directory containing the training dataset
+            save_file (str): directory to save the trained model for use at a later stage
+    """
+
+    model, preprocess = get_model()
+    train_batches = DataGenerator(N=69, no_of_classes=2, path = path, shuffle=True, preprocess=preprocess, purpose='train', batch='train')
+    valid_batches = DataGenerator(N=69, no_of_classes=2, path = path, preprocess=preprocess, purpose ='train', batch='test')
+    model.fit_generator(train_batches, validation_data=valid_batches, epochs=1, verbose=1)
+    model.save(save_file)
 
 def load_and_visualize(path):
     """Visualizes the training data with its masks
@@ -49,10 +63,11 @@ def load_and_visualize(path):
           path (str): root directory containing the images to visualize
     """
 
-    dg = DataGenerator(N=69, path=path, batch_size=6, no_of_classes=3, img_size=(640, 480))
+    dg = DataGenerator(N=69, path=path, batch_size=6, no_of_classes=2, img_size=(640, 480), purpose='visualize')
     for batch_idx, (image_names, X, Y) in enumerate(dg):  # loop batches one by one
         fig = plt.figure(figsize=(25, 25))
         for idx, (img, masks) in enumerate(zip(X, Y)):  # loop of images
+            # print(batch_idx, image_names[idx])
             for m in range(2):  # loop different defects
                 mask = masks[:, :, m]
                 mask = mask2contour(mask, width=2)
@@ -71,7 +86,9 @@ def load_and_visualize(path):
 
 
 def main():
-    load_and_visualize('/home/joe/Documents/steel_defect_detection/resized_images/')
+    path = '/home/joe/Documents/steel_defect_detection/resized_images/'
+    # load_and_visualize(path)
+    train(path,'./model.h5')
 
 
 if __name__ == '__main__':
