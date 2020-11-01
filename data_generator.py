@@ -68,7 +68,7 @@ class DataGenerator(keras.utils.Sequence):
 
     def fetch_data(self):
         for idx, annotation_object in enumerate(self.annotations):
-            # print(idx, self.batch, annotation_object["image_name"])
+            #print(idx, self.batch, annotation_object["image_name"])
             yield idx, annotation_object
 
     def __getitem__(self, index):
@@ -137,11 +137,15 @@ class DataGenerator(keras.utils.Sequence):
             for defect_class in defect_classes:
                 Y[idx, :, :, defect_class] = masks[:, :, defect_class]
 
-            if self.purpose == 'visualize' and idx == self.batch_size-1:
-                if self.preprocess is not None: X = self.preprocess(X)
-                return image_names, X, Y
+            if idx == self.batch_size-1:
+                if self.purpose == 'visualize':
+                    if self.preprocess is not None: X = self.preprocess(X)
+                    return image_names, X, Y
 
-            elif idx == self.batch_size-1:
-                if self.preprocess is not None: X = self.preprocess(X)
-                print("Returning X Y")
-                return X, Y
+                elif self.purpose == 'predict':
+                    print("Returning X")
+                    return X
+
+                elif idx == self.batch_size-1:
+                    if self.preprocess is not None: X = self.preprocess(X)
+                    return X, Y
