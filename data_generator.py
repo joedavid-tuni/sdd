@@ -68,7 +68,7 @@ class DataGenerator(keras.utils.Sequence):
 
     def fetch_data(self):
         for idx, annotation_object in enumerate(self.annotations):
-            print(idx, self.batch, annotation_object["image_name"])
+            # print(idx, self.batch, annotation_object["image_name"])
             yield idx, annotation_object
 
     def __getitem__(self, index):
@@ -143,4 +143,5 @@ class DataGenerator(keras.utils.Sequence):
 
             elif idx == self.batch_size-1:
                 if self.preprocess is not None: X = self.preprocess(X)
+                print("Returning X Y")
                 return X, Y
