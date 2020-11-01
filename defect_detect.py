@@ -10,6 +10,8 @@ from PIL import Image
 import argparse
 import sys
 
+NO_OF_CLASSES = 2
+
 
 def dice_coef(y_true, y_pred, smooth=1):
     """Calculates the dice coefficient
@@ -37,9 +39,10 @@ def get_model():
     """
 
     preprocess = sm.get_preprocessing('resnet34')
-    model = sm.Unet('resnet34', input_shape=(480, 640, 3), classes=2, activation='sigmoid')
+    model = sm.Unet('resnet34', input_shape=(480, 640, 3), classes=NO_OF_CLASSES, activation='sigmoid')
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=[dice_coef])
     return model, preprocess
+
 
 def train(path, save_file):
 
@@ -51,10 +54,11 @@ def train(path, save_file):
     """
 
     model, preprocess = get_model()
-    train_batches = DataGenerator(N=69, no_of_classes=2, path = path, shuffle=True, preprocess=preprocess, purpose='train', batch='train')
-    valid_batches = DataGenerator(N=69, no_of_classes=2, path = path, preprocess=preprocess, purpose ='train', batch='test')
+    train_batches = DataGenerator(N=69, no_of_classes=NO_OF_CLASSES, path=path, shuffle=True, preprocess=preprocess, purpose='train', batch='train')
+    valid_batches = DataGenerator(N=69, no_of_classes=NO_OF_CLASSES, path=path, preprocess=preprocess, purpose ='train', batch='test')
     model.fit_generator(train_batches, validation_data=valid_batches, epochs=1, verbose=1)
     model.save(save_file)
+
 
 def load_and_visualize(path):
     """Visualizes the training data with its masks
@@ -63,7 +67,7 @@ def load_and_visualize(path):
           path (str): root directory containing the images to visualize
     """
 
-    dg = DataGenerator(N=69, path=path, batch_size=6, no_of_classes=2, img_size=(640, 480), purpose='visualize')
+    dg = DataGenerator(N=69, path=path, batch_size=6, no_of_classes=NO_OF_CLASSES, img_size=(640, 480), purpose='visualize')
     for batch_idx, (image_names, X, Y) in enumerate(dg):  # loop batches one by one
         fig = plt.figure(figsize=(25, 25))
         for idx, (img, masks) in enumerate(zip(X, Y)):  # loop of images
@@ -87,7 +91,7 @@ def load_and_visualize(path):
 
 def main():
     path = '/home/joe/Documents/steel_defect_detection/resized_images/'
-    # load_and_visualize(path)
+    # load_and_visualize(path, NO_OF_CLASSES)
     train(path,'./model.h5')
 
 
