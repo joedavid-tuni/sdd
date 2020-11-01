@@ -37,7 +37,7 @@ def get_model():
     """
 
     preprocess = sm.get_preprocessing('resnet34')
-    model = sm.Unet('resnet34', input_shape=(480, 600, 3), classes=2, activation='sigmoid')
+    model = sm.Unet('resnet34', input_shape=(480, 640, 3), classes=2, activation='sigmoid')
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=[dice_coef])
     return model, preprocess
 
@@ -70,8 +70,46 @@ def load_and_visualize(path):
         plt.show()
 
 
+def predict(data_path, model_weights,):
+
+    model, preprocess = get_model()
+    model.load_weights(model_weights)
+
+    data_batches = DataGenerator(N=69, path=data_path, batch_size=3, no_of_classes=2, img_size=(640, 480), purpose='predict')
+
+    preds = model.predict_generator(data_batches, verbose=1)
+
+    for i, batch in enumerate(data_batches):
+        plt.figure(figsize=(12.8, 9.6))
+
+
+        for k in range(3):
+            plt.subplot(3, 2, 2 * k + 1)
+            img = batch[k,]
+            img = Image.fromarray(img.astype('uint8'))
+            img = np.array(img)
+            if k == 0:
+                plt.title('Test Image(s)  ')
+            plt.axis('off')
+            plt.imshow(img)
+
+        mask = np.zeros((preds.shape[0], preds.shape[1]))
+        for m in range(2):
+            mask += preds[:, :, m]
+
+        for defect in range(4):
+            plt.subplot(3, 2, 2 * k + 2)  # plt.subplot(16,5,2*k+j)
+            msk = preds[8 * i + k, :, :, defect]
+            plt.imshow(msk)
+            plt.axis('off')
+            mx = np.round(np.max(msk), 3)
+            if k == 0:
+                plt.title('Predicted Mask for Defect ' + str(defect + 1))
+
+
 def main():
-    load_and_visualize('/home/joe/Documents/steel_defect_detection/resized_images/')
+    #load_and_visualize('/home/joe/Documents/steel_defect_detection/resized_images/')
+    predict('/home/joe/Documents/steel_defect_detection/resized_images/','./model.h5')
 
 
 if __name__ == '__main__':

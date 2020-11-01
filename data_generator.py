@@ -10,7 +10,7 @@ class DataGenerator(keras.utils.Sequence):
 
     """
 
-    def __init__(self, N, path, no_of_classes, img_size=(640, 480), batch_size=16, shuffle=False, preprocess=None):
+    def __init__(self, N, path, no_of_classes, batch=None, ratio=0.8, img_size=(640, 480), batch_size=16, shuffle=False, preprocess=None, purpose='visualize'):
         """ Initializes the DataGenerator Object
 
         Args:
@@ -29,10 +29,12 @@ class DataGenerator(keras.utils.Sequence):
         self.N = N
         self.path = path
         self.img_size = img_size
-        self.on_epoch_end()
         self.indexes = np.arange(self.N)
         self.no_of_classes = no_of_classes
-
+        self.purpose = purpose
+        self.counter = 0
+        self.ratio = ratio
+        self.batch = batch
         annotations_PREFIX = "images.item"
         f = open('ICH.json')
 
@@ -47,19 +49,27 @@ class DataGenerator(keras.utils.Sequence):
         """
         return int(np.floor(self.N / self.batch_size))
 
-    def on_epoch_end(self):
-        """ A method called at the end of every epoch that shuffles the data if parameter shuffle = True.
-
-        """
-
-        if self.shuffle:
-            np.random.shuffle(self.indexes)
+    # def fetch_data(self, purpose='visualize'):
+    #     index = int(self.N * self.ratio)
+    #     for idx, annotation_object in enumerate(self.annotations):
+    #         if purpose == 'train':
+    #             if self.batch == 'train':
+    #                 if self.counter <= index:
+    #                     yield idx, annotation_object
+    #                 else: continue
+    #
+    #             elif self.batch == 'test':
+    #                 if self.counter > index:
+    #                     yield idx, annotation_object
+    #                 else: continue
+    #             self.counter = self.counter + 1
+    #         else:
+    #             yield idx, annotation_object
 
     def fetch_data(self):
         for idx, annotation_object in enumerate(self.annotations):
+            print(idx, self.batch, annotation_object["image_name"])
             yield idx, annotation_object
-
-
 
     def __getitem__(self, index):
         """Generates one batch of data at position 'index'.
@@ -87,10 +97,11 @@ class DataGenerator(keras.utils.Sequence):
         # Generate indexes of the batch
         indexes = self.indexes[index * self.batch_size:(index + 1) * self.batch_size]
 
-        class_map = {'scratch': 0 , 'blister': 1, 'dent': 2}
+        class_map = {'scratch': 0, 'blister': 1, 'dent': 2}
         image_names = []
+        # print("\n~~~~~~~~~New Batch~~~~~~~~~")
         for idx, annotation_object in self.fetch_data():
-
+            # print(annotation_object["image_id"])
             image_name = annotation_object["image_name"]
             image_names.append(image_name)
             X[idx, ] = plt.imread(self.path + image_name)
@@ -127,5 +138,13 @@ class DataGenerator(keras.utils.Sequence):
                 Y[idx, :, :, defect_class] = masks[:, :, defect_class]
 
             if idx == self.batch_size-1:
-                if self.preprocess is not None: X = self.preprocess(X)
-                return image_names, X, Y
+                if self.purpose == 'visualize':
+                    if self.preprocess is not None: X = self.preprocess(X)
+                    return image_names, X, Y
+
+                elif self.purpose == 'predict':
+                    return X
+
+                elif idx == self.batch_size-1:
+                    if self.preprocess is not None: X = self.preprocess(X)
+                    return X, Y
