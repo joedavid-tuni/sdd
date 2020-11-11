@@ -73,19 +73,13 @@ class DataGenerator(keras.utils.Sequence):
             X (ndarray): array containing the image
                         4D array of size: batch_size x img_size[0] x img_size[1] x 3 (RGB)
             Y (ndarray): array containing the masks for corresponding images in X
-                        4D array of size: batch_size x img_size[0] x img_size[1] x 4 (number of defect classes)
-
-        Note: If subset =' train', both the images along with its masks is returned. This is essentially the information
-        contained in the train.csv file. If subset = 'test', only the images in the test_images folder is returned
+                        4D array of size: batch_size x img_size[0] x img_size[1] x 3 (number of defect classes)
         """
         # (batch size, image height (rows), image width (columns), number of channels (RGB=3))
         X = np.zeros((self.batch_size, self.img_size[1], self.img_size[0], 3), dtype=np.float32)
 
         # (batch size, image height (rows), image width (columns), number of (defect) classes = 3)
         Y = np.zeros((self.batch_size, self.img_size[1], self.img_size[0], self.no_of_classes), dtype=np.int8)
-
-        # Generate indexes of the batch
-        indexes = self.indexes[index * self.batch_size:(index + 1) * self.batch_size]
 
         class_map = {'scratch': 0 , 'blister': 1, 'dent': 2}
         image_names = []
