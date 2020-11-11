@@ -138,14 +138,14 @@ class DataGenerator(keras.utils.Sequence):
                 Y[idx, :, :, defect_class] = masks[:, :, defect_class]
 
             if idx == self.batch_size-1:
+                if self.preprocess is not None: X = self.preprocess(X)
+
                 if self.purpose == 'visualize':
-                    if self.preprocess is not None: X = self.preprocess(X)
                     return image_names, X, Y
 
                 elif self.purpose == 'predict':
-                    print("Returning X")
                     return X
 
-                elif idx == self.batch_size-1:
-                    if self.preprocess is not None: X = self.preprocess(X)
+                else:
+                    #print("Returning X,Y")
                     return X, Y

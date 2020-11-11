@@ -56,7 +56,7 @@ def train(path, save_file):
     model, preprocess = get_model()
     train_batches = DataGenerator(N=69, no_of_classes=NO_OF_CLASSES, path=path, shuffle=True, preprocess=preprocess, purpose='train', batch='train')
     valid_batches = DataGenerator(N=69, no_of_classes=NO_OF_CLASSES, path=path, preprocess=preprocess, purpose ='train', batch='test')
-    model.fit_generator(train_batches, validation_data=valid_batches, epochs=2, verbose=1)
+    model.fit_generator(train_batches, epochs=2, verbose=1)
     model.save(save_file)
 
 
@@ -91,7 +91,7 @@ def load_and_visualize(path):
 
 def main():
     path = '/home/joe/Documents/steel_defect_detection/resized_images/'
-    # load_and_visualize(path, NO_OF_CLASSES)
+    #load_and_visualize(path)
     train(path,'./model.h5')
 
 
