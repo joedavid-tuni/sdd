@@ -11,35 +11,7 @@ import argparse
 import sys
 
 
-def dice_coef(y_true, y_pred, smooth=1):
-    """Calculates the dice coefficient
 
-    Args:
-        y_true: pixel truth values
-        y_pred: pixel predicted values
-        smooth: smooth parameter to smooth the loss function
-
-    Returns:
-        (float): Returns the dice coefficient
-    """
-    y_true_f = K.flatten(y_true)
-    y_pred_f = K.flatten(y_pred)
-    intersection = K.sum(y_true_f * y_pred_f)
-    return (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
-
-
-def get_model():
-    """Gets the model used for training the dataset
-
-    Returns:
-        model: the model used for training
-        preprocess: the preprocessing model
-    """
-
-    preprocess = sm.get_preprocessing('resnet34')
-    model = sm.Unet('resnet34', input_shape=(480, 600, 3), classes=2, activation='sigmoid')
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=[dice_coef])
-    return model, preprocess
 
 
 def load_and_visualize(path):
